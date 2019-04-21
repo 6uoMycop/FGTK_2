@@ -4,15 +4,14 @@
     #define alloca malloc
     #include <Windows.h>
     #define SIZE 64
-    #ifdef _DEBUG
     #define YYDEBUG 1
-    #endif
     char cVariable = -1;
     int ifComment = 0;
+    int iLineNumber = 1;
     
     struct express
     {
-		char cExVar;
+        char cExVar;
         int  ifInit;
         int  iCoeffArr[SIZE];
     };
@@ -29,6 +28,11 @@
         }
         printf("\n");
 #endif
+    }
+    
+    void errorOutput(const char *str)
+    {
+        yyerror(str);
     }
     
     void printExpr(struct express exp)
@@ -120,6 +124,7 @@ line    :   polyvar '=' expr
                 }
                 ePolyVariables[$1-'A'].ifInit = 1;
                 ePolyVariables[$1-'A'].cExVar = $3.cExVar;
+                iLineNumber++;
                 debugOutput(ePolyVariables[$1-'A'], 999);
             }
         |   'p' 'r' 'i' 'n' 't' ' ' polyvar
@@ -131,13 +136,15 @@ line    :   polyvar '=' expr
                 }
                 else
                 {
-                    yyerror("Uninitialized $-variable");
+                    errorOutput("Uninitialized $-variable");
                     YYABORT;
                 }
+                iLineNumber++;
             }
         |   '#' comment %prec COM
             {
                 ifComment = 0;
+                iLineNumber++;
             }
         |   polyvar '=' expr '#' comment %prec COM
             {
@@ -148,6 +155,7 @@ line    :   polyvar '=' expr
                 ePolyVariables[$1-'A'].ifInit = 1;
                 ePolyVariables[$1-'A'].cExVar = $3.cExVar;
                 ifComment = 0;
+                iLineNumber++;
                 debugOutput(ePolyVariables[$1-'A'], 999);
             }
         |   'p' 'r' 'i' 'n' 't' ' ' polyvar '#' comment %prec COM
@@ -159,21 +167,40 @@ line    :   polyvar '=' expr
                 }
                 else
                 {
-                    yyerror("Uninitialized $-variable");
+                    errorOutput("Uninitialized $-variable");
                     YYABORT;
                 }
                 ifComment = 0;
+                iLineNumber++;
             }
-		|	polyvar '='
-		  {
-				yyerror("Expected assignment after '='");
-				YYABORT;
-		  }
-		|	polyvar '=' '#' comment %prec COM
-		  {
-				yyerror("Expected assignment after '='");
-				YYABORT;
-		  }
+        |   /* VOID */
+            {
+                iLineNumber++;  
+            }           
+        |   polyvar '='
+            {
+                errorOutput("Expected assignment after '='");
+                iLineNumber++;
+                YYABORT;
+            }
+        |   polyvar '=' '#' comment %prec COM
+            {
+                errorOutput("Expected assignment after '='");
+                iLineNumber++;
+                YYABORT;
+            }           
+        |   'p' 'r' 'i' 'n' 't' ' '
+            {
+                errorOutput("Expected $-variable as an argument");
+                iLineNumber++;
+                YYABORT;
+            }
+        |   'p' 'r' 'i' 'n' 't' ' ' '#' comment %prec COM
+            {
+                errorOutput("Expected $-variable as an argument");
+                iLineNumber++;
+                YYABORT;
+            }
         ;
 
 polyvar :   '$' POLYVARIABLE
@@ -185,16 +212,15 @@ polyvar :   '$' POLYVARIABLE
 expr    :   expr '+' expr                                                    /*1*/
             {
                 ZeroMemory($$.iCoeffArr, SIZE);
-				printf("%c %c\n", $1.cExVar, $3.cExVar);
-				if($1.cExVar != $3.cExVar)
-				{
-					if(($1.cExVar != '@' && ($3.cExVar >= 'a' && $3.cExVar <= 'z')) || ($3.cExVar != '@' && ($1.cExVar >= 'a' && $1.cExVar <= 'z')))
-					{
-						yyerror("Variables mismatch");
-						YYABORT;
-					}
-				}
-				$$.cExVar = (($1.cExVar != '@') ? $1.cExVar : $3.cExVar);
+                if($1.cExVar != $3.cExVar)
+                {
+                    if(($1.cExVar != '@' && ($3.cExVar >= 'a' && $3.cExVar <= 'z')) || ($3.cExVar != '@' && ($1.cExVar >= 'a' && $1.cExVar <= 'z')))
+                    {
+                        errorOutput("Variables mismatch");
+                        YYABORT;
+                    }
+                }
+                $$.cExVar = (($1.cExVar != '@') ? $1.cExVar : $3.cExVar);
                 for(int i = 0; i < SIZE; i++)
                 {
                     $$.iCoeffArr[i] = $1.iCoeffArr[i] + $3.iCoeffArr[i];
@@ -204,16 +230,15 @@ expr    :   expr '+' expr                                                    /*1
         |   expr '-' expr                                                    /*2*/
             {
                 ZeroMemory($$.iCoeffArr, SIZE);
-				printf("%c %c\n", $1.cExVar, $3.cExVar);
-				if($1.cExVar != $3.cExVar)
-				{
-					if(($1.cExVar != '@' && ($3.cExVar >= 'a' && $3.cExVar <= 'z')) || ($3.cExVar != '@' && ($1.cExVar >= 'a' && $1.cExVar <= 'z')))
-					{
-						yyerror("Variables mismatch");
-						YYABORT;
-					}
-				}
-				$$.cExVar = (($1.cExVar != '@') ? $1.cExVar : $3.cExVar);
+                if($1.cExVar != $3.cExVar)
+                {
+                    if(($1.cExVar != '@' && ($3.cExVar >= 'a' && $3.cExVar <= 'z')) || ($3.cExVar != '@' && ($1.cExVar >= 'a' && $1.cExVar <= 'z')))
+                    {
+                        errorOutput("Variables mismatch");
+                        YYABORT;
+                    }
+                }
+                $$.cExVar = (($1.cExVar != '@') ? $1.cExVar : $3.cExVar);
                 for(int i = 0; i < SIZE; i++)
                 {
                     $$.iCoeffArr[i] = $1.iCoeffArr[i] - $3.iCoeffArr[i];
@@ -223,16 +248,15 @@ expr    :   expr '+' expr                                                    /*1
         |   expr '*' expr                                                    /*3*/
             {
                 ZeroMemory($$.iCoeffArr, SIZE);
-				printf("%c %c\n", $1.cExVar, $3.cExVar);
-				if($1.cExVar != $3.cExVar)
-				{
-					if(($1.cExVar != '@' && ($3.cExVar >= 'a' && $3.cExVar <= 'z')) || ($3.cExVar != '@' && ($1.cExVar >= 'a' && $1.cExVar <= 'z')))
-					{
-						yyerror("Variables mismatch");
-						YYABORT;
-					}
-				}
-				$$.cExVar = (($1.cExVar != '@') ? $1.cExVar : $3.cExVar);
+                if($1.cExVar != $3.cExVar)
+                {
+                    if(($1.cExVar != '@' && ($3.cExVar >= 'a' && $3.cExVar <= 'z')) || ($3.cExVar != '@' && ($1.cExVar >= 'a' && $1.cExVar <= 'z')))
+                    {
+                        errorOutput("Variables mismatch");
+                        YYABORT;
+                    }
+                }
+                $$.cExVar = (($1.cExVar != '@') ? $1.cExVar : $3.cExVar);
                 for(int i = 0; i < SIZE / 2; i++)
                 {
                     for(int j = 0; j < SIZE / 2; j++)
@@ -246,10 +270,10 @@ expr    :   expr '+' expr                                                    /*1
             {
                 if(ePolyVariables[$1-'A'].ifInit != 1)
                 {
-                    yyerror("Uninitialized $-variable");
+                    errorOutput("Uninitialized $-variable");
                     YYABORT;
                 }
-				$$.cExVar = ePolyVariables[$1-'A'].cExVar;
+                $$.cExVar = ePolyVariables[$1-'A'].cExVar;
                 ZeroMemory($$.iCoeffArr, SIZE);
                 for(int i = 0; i < SIZE; i++)
                 {
@@ -261,10 +285,10 @@ expr    :   expr '+' expr                                                    /*1
             {
                 if(ePolyVariables[$2-'A'].ifInit != 1)
                 {
-                    yyerror("Uninitialized $-variable");
+                    errorOutput("Uninitialized $-variable");
                     YYABORT;
                 }
-				$$.cExVar = ePolyVariables[$2-'A'].cExVar;
+                $$.cExVar = ePolyVariables[$2-'A'].cExVar;
                 ZeroMemory($$.iCoeffArr, SIZE);
                 for(int i = 0; i < SIZE; i++)
                 {
@@ -276,10 +300,10 @@ expr    :   expr '+' expr                                                    /*1
             {
                 if(ePolyVariables[$1-'A'].ifInit != 1)
                 {
-                    yyerror("Uninitialized $-variable");
+                    errorOutput("Uninitialized $-variable");
                     YYABORT;
                 }
-				$$.cExVar = ePolyVariables[$1-'A'].cExVar;
+                $$.cExVar = ePolyVariables[$1-'A'].cExVar;
                 ZeroMemory($$.iCoeffArr, SIZE);
                 int iTmp[SIZE] = { 0 };
                 if($3 == 0)
@@ -314,10 +338,10 @@ expr    :   expr '+' expr                                                    /*1
             {
                 if(ePolyVariables[$3-'A'].ifInit != 1)
                 {
-                    yyerror("Uninitialized $-variable");
+                    errorOutput("Uninitialized $-variable");
                     YYABORT;
                 }
-				$$.cExVar = ePolyVariables[$3-'A'].cExVar;
+                $$.cExVar = ePolyVariables[$3-'A'].cExVar;
                 ZeroMemory($$.iCoeffArr, SIZE);
                 int iTmp[SIZE] = { 0 };
                 if($6 == 0)
@@ -358,7 +382,7 @@ expr    :   expr '+' expr                                                    /*1
         |   '(' expr ')'                                                     /*4*/
             {
                 ZeroMemory($$.iCoeffArr, SIZE);
-				$$.cExVar = $2.cExVar;
+                $$.cExVar = $2.cExVar;
                 for(int i = 0; i < SIZE; i++)
                 {
                     $$.iCoeffArr[i] = $2.iCoeffArr[i];
@@ -368,7 +392,7 @@ expr    :   expr '+' expr                                                    /*1
         |   '-' '(' expr ')'                                 %prec UMINUS    /*5*/
             {
                 ZeroMemory($$.iCoeffArr, SIZE);
-				$$.cExVar = $3.cExVar;
+                $$.cExVar = $3.cExVar;
                 for(int i = 0; i < SIZE; i++)
                 {
                     $$.iCoeffArr[i] = -1 * $3.iCoeffArr[i];
@@ -392,7 +416,7 @@ expr    :   expr '+' expr                                                    /*1
         |   number '*' expr                                                  /*8*/
             {
                 ZeroMemory($$.iCoeffArr, SIZE);
-				$$.cExVar = $3.cExVar;
+                $$.cExVar = $3.cExVar;
                 for(int i = 0; i < SIZE; i++)
                 {
                     $$.iCoeffArr[i] = $3.iCoeffArr[i] * $1;
@@ -402,7 +426,7 @@ expr    :   expr '+' expr                                                    /*1
         |   '-' number '*' expr                              %prec UMINUS    /*9*/
             {
                 ZeroMemory($$.iCoeffArr, SIZE);
-				$$.cExVar = $4.cExVar;
+                $$.cExVar = $4.cExVar;
                 for(int i = 0; i < SIZE; i++)
                 {
                     $$.iCoeffArr[i] = -1 * $4.iCoeffArr[i] * $2;
@@ -413,7 +437,7 @@ expr    :   expr '+' expr                                                    /*1
             {
                 ZeroMemory($$.iCoeffArr, SIZE);
                 $$.iCoeffArr[1] = 1;
-				$$.cExVar = $1;
+                $$.cExVar = $1;
                 cVariable = $1;
                 debugOutput($$, 10);
             }
@@ -421,7 +445,7 @@ expr    :   expr '+' expr                                                    /*1
             {
                 ZeroMemory($$.iCoeffArr, SIZE);
                 $$.iCoeffArr[1] = -1;
-				$$.cExVar = $2;
+                $$.cExVar = $2;
                 cVariable = $2;
                 debugOutput($$, 11);
             }
@@ -429,7 +453,7 @@ expr    :   expr '+' expr                                                    /*1
             {
                 ZeroMemory($$.iCoeffArr, SIZE);
                 $$.iCoeffArr[$3] = 1;
-				$$.cExVar = $1;
+                $$.cExVar = $1;
                 cVariable = $1;
                 debugOutput($$, 12);
             }
@@ -444,7 +468,7 @@ expr    :   expr '+' expr                                                    /*1
                 {
                     $$.iCoeffArr[$3] = -1;
                 }
-				$$.cExVar = $3;
+                $$.cExVar = $3;
                 cVariable = $3;
                 debugOutput($$, 13);
             }
@@ -452,7 +476,7 @@ expr    :   expr '+' expr                                                    /*1
             {
                 ZeroMemory($$.iCoeffArr, SIZE);
                 $$.iCoeffArr[$4] = -1;
-				$$.cExVar = $2;
+                $$.cExVar = $2;
                 cVariable = $2;
                 debugOutput($$, 14);
             }
@@ -462,7 +486,15 @@ expr    :   expr '+' expr                                                    /*1
                 $$.cExVar = '@';
                 if($3 == 0)
                 {
-                    $$.iCoeffArr[0] = 1;
+                    if($1 == 0)
+                    {
+                        errorOutput("\"0^0\" undefined");
+                        YYABORT;
+                    }
+                    else
+                    {
+                        $$.iCoeffArr[0] = 1;
+                    }
                 }
                 else
                 {
@@ -524,7 +556,7 @@ expr    :   expr '+' expr                                                    /*1
         |   '(' expr ')' '^' number                                          /*18*/
             {
                 ZeroMemory($$.iCoeffArr, SIZE);
-				$$.cExVar = $2.cExVar;
+                $$.cExVar = $2.cExVar;
                 int iTmp[SIZE] = { 0 };
                 if($5 == 0)
                 {
@@ -557,7 +589,7 @@ expr    :   expr '+' expr                                                    /*1
         |   '-' '(' expr ')' '^' number                      %prec UMINUS    /*19*/
             {
                 ZeroMemory($$.iCoeffArr, SIZE);
-				$$.cExVar = $3.cExVar;
+                $$.cExVar = $3.cExVar;
                 int iTmp[SIZE] = { 0 };
                 if($6 == 0)
                 {
@@ -602,7 +634,7 @@ expr    :   expr '+' expr                                                    /*1
             {
                 ZeroMemory($$.iCoeffArr, SIZE);
                 $$.iCoeffArr[1] = -1;
-				$$.cExVar = $3;
+                $$.cExVar = $3;
                 cVariable = $3;
                 $$.iCoeffArr[0] -= (int)$3;
                 debugOutput($$, 21);
@@ -610,16 +642,15 @@ expr    :   expr '+' expr                                                    /*1
         |   expr expr                                        %prec '*'       /*1488*/
             {
                 ZeroMemory($$.iCoeffArr, SIZE);
-				printf("%c %c\n", $1.cExVar, $2.cExVar);
-				if($1.cExVar != $2.cExVar)
-				{
-					if(($1.cExVar != '@' && ($2.cExVar >= 'a' && $2.cExVar <= 'z')) || ($2.cExVar != '@' && ($1.cExVar >= 'a' && $1.cExVar <= 'z')))
-					{
-						yyerror("Variables mismatch");
-						YYABORT;
-					}
-				}
-				$$.cExVar = (($1.cExVar != '@') ? $1.cExVar : $2.cExVar);
+                if($1.cExVar != $2.cExVar)
+                {
+                    if(($1.cExVar != '@' && ($2.cExVar >= 'a' && $2.cExVar <= 'z')) || ($2.cExVar != '@' && ($1.cExVar >= 'a' && $1.cExVar <= 'z')))
+                    {
+                        errorOutput("Variables mismatch");
+                        YYABORT;
+                    }
+                }
+                $$.cExVar = (($1.cExVar != '@') ? $1.cExVar : $2.cExVar);
                 for(int i = 0; i < SIZE / 2; i++)
                 {
                     for(int j = 0; j < SIZE / 2; j++)
@@ -629,27 +660,27 @@ expr    :   expr '+' expr                                                    /*1
                 }
                 debugOutput($$, 1488);
             }
-		/* errors */
-		|	expr '-' '-'
-		  {
-				yyerror("Operation \"--\" undefined");
-				YYABORT;
-		  }
-		|	'-' '-' expr
-		  {
-				yyerror("Operation \"--\" undefined");
-				YYABORT;
-		  }
-		|	expr '+' '+'
-		  {
-				yyerror("Operation \"++\" undefined");
-				YYABORT;
-		  }
-		|	'+' '+' expr
-		  {
-				yyerror("Operation \"++\" undefined");
-				YYABORT;
-		  }
+        /* errors */
+        |   expr '-' '-'
+          {
+                errorOutput("Operation \"--\" undefined");
+                YYABORT;
+          }
+        |   '-' '-' expr
+          {
+                errorOutput("Operation \"--\" undefined");
+                YYABORT;
+          }
+        |   expr '+' '+'
+          {
+                errorOutput("Operation \"++\" undefined");
+                YYABORT;
+          }
+        |   '+' '+' expr
+          {
+                errorOutput("Operation \"++\" undefined");
+                YYABORT;
+          }
         ;
 
 number  :   DIGIT

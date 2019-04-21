@@ -8,7 +8,7 @@ FILE *yyin = NULL;
 
 int yyerror(char *str)
 {
-    printf("Error: \"%s\"\n", str);
+    printf("Line %i - error: \"%s\"\n", iLineNumber, str);
     return 0;
 }
 
@@ -20,6 +20,11 @@ int yylex()
 #ifdef _DEBUG
     //printf("\'%c\' %i %i\n", c, (int)c, ifComment);
 #endif
+
+	//while (c == ' ')
+	//{
+	//	c = fgetc(yyin);
+	//}
 
     if (ifComment && c != '\n')
     {
