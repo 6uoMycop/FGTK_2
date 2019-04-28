@@ -308,7 +308,24 @@ expr    :   expr '+' expr                                                    /*1
                 int iTmp[SIZE] = { 0 };
                 if($3 == 0)
                 {
-                    $$.iCoeffArr[0] = 1;
+					int f = 0;
+					for(int i = 0; i < SIZE / 2; i++)
+					{
+						if(ePolyVariables[$1-'A'].iCoeffArr[i] != 0)
+						{
+							f = 1;
+							break;
+						}
+					}
+					if(f == 1)
+					{
+						$$.iCoeffArr[0] = 1;
+					}
+					else
+					{
+                        errorOutput("\"0^0\" undefined");
+                        YYABORT;
+					}
                 }
                 else
                 {
@@ -346,7 +363,24 @@ expr    :   expr '+' expr                                                    /*1
                 int iTmp[SIZE] = { 0 };
                 if($6 == 0)
                 {
-                    $$.iCoeffArr[0] = 1;
+					int f = 0;
+					for(int i = 0; i < SIZE / 2; i++)
+					{
+						if(ePolyVariables[$3-'A'].iCoeffArr[i] != 0)
+						{
+							f = 1;
+							break;
+						}
+					}
+					if(f == 1)
+					{
+						$$.iCoeffArr[0] = 1;
+					}
+					else
+					{
+                        errorOutput("\"0^0\" undefined");
+                        YYABORT;
+					}
                 }
                 else
                 {
@@ -510,9 +544,17 @@ expr    :   expr '+' expr                                                    /*1
             {
                 ZeroMemory($$.iCoeffArr, SIZE);
                 $$.cExVar = '@';
-                if($4 == 0)
+				if($4 == 0)
                 {
-                    $$.iCoeffArr[0] = -1;
+                    if($2 == 0)
+                    {
+                        errorOutput("\"0^0\" undefined");
+                        YYABORT;
+                    }
+                    else
+                    {
+                        $$.iCoeffArr[0] = -1;
+                    }
                 }
                 else
                 {
@@ -528,9 +570,17 @@ expr    :   expr '+' expr                                                    /*1
             {
                 ZeroMemory($$.iCoeffArr, SIZE);
                 $$.cExVar = '@';
-                if($6 == 0)
+				if($6 == 0)
                 {
-                    $$.iCoeffArr[0] = 1;
+                    if($3 == 0)
+                    {
+                        errorOutput("\"0^0\" undefined");
+                        YYABORT;
+                    }
+                    else
+                    {
+                        $$.iCoeffArr[0] = 1;
+                    }
                 }
                 else
                 {
@@ -560,7 +610,24 @@ expr    :   expr '+' expr                                                    /*1
                 int iTmp[SIZE] = { 0 };
                 if($5 == 0)
                 {
-                    $$.iCoeffArr[0] = 1;
+					int f = 0;
+					for(int i = 0; i < SIZE / 2; i++)
+					{
+						if($2.iCoeffArr[i] != 0)
+						{
+							f = 1;
+							break;
+						}
+					}
+					if(f == 1)
+					{
+						$$.iCoeffArr[0] = 1;
+					}
+					else
+					{
+                        errorOutput("\"0^0\" undefined");
+                        YYABORT;
+					}
                 }
                 else
                 {
@@ -593,7 +660,24 @@ expr    :   expr '+' expr                                                    /*1
                 int iTmp[SIZE] = { 0 };
                 if($6 == 0)
                 {
-                    $$.iCoeffArr[0] = -1;
+					int f = 0;
+					for(int i = 0; i < SIZE / 2; i++)
+					{
+						if($3.iCoeffArr[i] != 0)
+						{
+							f = 1;
+							break;
+						}
+					}
+					if(f == 1)
+					{
+						$$.iCoeffArr[0] = -1;
+					}
+					else
+					{
+                        errorOutput("\"0^0\" undefined");
+                        YYABORT;
+					}
                 }
                 else
                 {
